@@ -20,7 +20,7 @@ const sendMessage = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Transaction not found");
     }
 
-    const isParticipant = 
+    const isParticipant =
         transaction.owner.toString() === req.user._id.toString() ||
         transaction.requester.toString() === req.user._id.toString();
 
@@ -45,9 +45,17 @@ const sendMessage = asyncHandler(async (req, res) => {
     // Emit to socket room for real-time updates
     try {
         const io = getIO();
-        io.to(`transaction:${transactionId}`).emit('new-message', populatedMessage);
+        if (io) {
+            io.to(`transaction:${transactionId}`).emit('new-message', {
+                _id: populatedMessage._id,
+                content: populatedMessage.content,
+                sender: populatedMessage.sender,
+                transaction: populatedMessage.transaction,
+                createdAt: populatedMessage.createdAt
+            });
+        }
     } catch (err) {
-        console.log('Socket not available for real-time update');
+        console.log('Socket.io not available for real-time update:', err.message);
     }
 
     const recipient = transaction.owner.toString() === req.user._id.toString()
@@ -78,7 +86,7 @@ const getMessages = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Transaction not found");
     }
 
-    const isParticipant = 
+    const isParticipant =
         transaction.owner.toString() === req.user._id.toString() ||
         transaction.requester.toString() === req.user._id.toString();
 

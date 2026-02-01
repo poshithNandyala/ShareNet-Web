@@ -8,17 +8,19 @@ let io;
 export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: process.env.CORS_ORIGIN,
-            credentials: true
-        }
+            origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+            credentials: true,
+            methods: ["GET", "POST"]
+        },
+        transports: ["websocket", "polling"]
     });
 
     // Authentication middleware
     io.use(async (socket, next) => {
         try {
-            const token = socket.handshake.auth.token || 
-                          socket.handshake.headers.authorization?.replace("Bearer ", "");
-            
+            const token = socket.handshake.auth.token ||
+                socket.handshake.headers.authorization?.replace("Bearer ", "");
+
             if (!token) {
                 return next(new Error("Authentication required"));
             }
@@ -44,7 +46,7 @@ export const initializeSocket = (server) => {
                 }
 
                 // Verify user is participant
-                const isParticipant = 
+                const isParticipant =
                     transaction.owner.toString() === socket.userId ||
                     transaction.requester.toString() === socket.userId;
 
@@ -60,8 +62,16 @@ export const initializeSocket = (server) => {
                 }
 
                 socket.join(`transaction:${transactionId}`);
+                console.log(`User ${socket.userId} joined transaction ${transactionId}`);
                 socket.emit("joined", { transactionId });
+
+                // Notify others that user joined
+                socket.to(`transaction:${transactionId}`).emit("user-joined", {
+                    userId: socket.userId,
+                    message: "User joined the chat"
+                });
             } catch (error) {
+                console.error("Error joining transaction:", error);
                 socket.emit("error", { message: "Failed to join transaction" });
             }
         });
@@ -75,7 +85,7 @@ export const initializeSocket = (server) => {
                     return;
                 }
 
-                const isParticipant = 
+                const isParticipant =
                     transaction.owner.toString() === socket.userId ||
                     transaction.requester.toString() === socket.userId;
 
@@ -93,8 +103,18 @@ export const initializeSocket = (server) => {
                 const populatedMessage = await Message.findById(message._id)
                     .populate("sender", "fullName avatar");
 
-                io.to(`transaction:${transactionId}`).emit("new-message", populatedMessage);
+                // Emit to all users in the transaction room
+                io.to(`transaction:${transactionId}`).emit("new-message", {
+                    _id: populatedMessage._id,
+                    content: populatedMessage.content,
+                    sender: populatedMessage.sender,
+                    transaction: populatedMessage.transaction,
+                    createdAt: populatedMessage.createdAt
+                });
+
+                console.log(`Message sent in transaction ${transactionId}:`, populatedMessage.content);
             } catch (error) {
+                console.error("Error sending message:", error);
                 socket.emit("error", { message: "Failed to send message" });
             }
         });
