@@ -162,15 +162,21 @@ const acceptRequest = asyncHandler(async (req, res) => {
     request.status = 'ACCEPTED';
     await request.save();
 
-    const transaction = await Transaction.create({
+    const transactionData = {
         item: request.item._id,
         owner: request.owner,
         requester: request.requester,
         request: request._id,
         mode: request.item.mode,
-        agreedPrice: request.proposedPrice || request.item.price,
-        agreedDuration: request.proposedDuration || request.item.duration
-    });
+        agreedPrice: Number(request.proposedPrice) || Number(request.item.price) || 0
+    };
+    
+    // Only add agreedDuration if it's a valid number
+    if (request.proposedDuration && !isNaN(Number(request.proposedDuration))) {
+        transactionData.agreedDuration = Number(request.proposedDuration);
+    }
+    
+    const transaction = await Transaction.create(transactionData);
 
     await Item.findByIdAndUpdate(request.item._id, { isAvailable: false });
 

@@ -137,11 +137,21 @@ const proposeAgreement = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Agreement can only be proposed after request is accepted");
     }
 
-    transaction.agreedPrice = agreedPrice || transaction.agreedPrice;
-    transaction.agreedDuration = agreedDuration || transaction.agreedDuration;
-    transaction.terms = terms;
-    transaction.startDate = startDate;
-    transaction.endDate = endDate;
+    if (agreedPrice !== undefined) {
+        transaction.agreedPrice = Number(agreedPrice) || 0;
+    }
+    if (agreedDuration !== undefined && !isNaN(Number(agreedDuration))) {
+        transaction.agreedDuration = Number(agreedDuration);
+    }
+    if (terms !== undefined) {
+        transaction.terms = terms;
+    }
+    if (startDate) {
+        transaction.startDate = new Date(startDate);
+    }
+    if (endDate) {
+        transaction.endDate = new Date(endDate);
+    }
     transaction.status = 'AGREEMENT_PROPOSED';
     await transaction.save();
 
