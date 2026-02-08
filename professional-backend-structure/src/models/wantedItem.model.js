@@ -52,7 +52,14 @@ const wantedItemSchema = new Schema({
     acceptedOffer: { type: Schema.Types.ObjectId },
     fulfilledBy: { type: Schema.Types.ObjectId, ref: 'User' },
     expiresAt: Date,
-    viewCount: { type: Number, default: 0 }
+    viewCount: { type: Number, default: 0 },
+    collegeDomain: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+        index: true
+    }
 }, { timestamps: true });
 
 export const WantedItem = mongoose.model("WantedItem", wantedItemSchema);

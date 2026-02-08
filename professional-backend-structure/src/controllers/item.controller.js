@@ -31,7 +31,8 @@ const createItem = asyncHandler(async (req, res) => {
         condition,
         tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())) : [],
         photos,
-        owner: req.user._id
+        owner: req.user._id,
+        collegeDomain: req.user.collegeDomain
     });
 
     return res.status(201).json(
@@ -165,7 +166,7 @@ const getAllItems = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { isAvailable: true };
+    const filter = { isAvailable: true, collegeDomain: req.user.collegeDomain };
 
     if (category) {
         filter.category = category;

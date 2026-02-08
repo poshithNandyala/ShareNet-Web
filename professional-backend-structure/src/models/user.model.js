@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken"
 import bcrypt from "bcrypt"
+import { isValidCollegeEmail } from "../utils/colleges.js"
 
 const userSchema = new Schema(
     {
@@ -20,10 +21,21 @@ const userSchema = new Schema(
             trim: true,
             validate: {
                 validator: function(v) {
-                    return /\.edu$/.test(v);
+                    return isValidCollegeEmail(v);
                 },
-                message: props => `${props.value} is not a valid campus email! Must end with .edu`
+                message: props => `${props.value} is not a valid college/university email.`
             }
+        },
+        college: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        collegeDomain: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true
         },
         fullName: {
             type: String,
@@ -75,7 +87,9 @@ userSchema.methods.generateAccessToken = function () {
             _id: this._id,
             email: this.email,
             username: this.username,
-            fullName: this.fullName
+            fullName: this.fullName,
+            college: this.college,
+            collegeDomain: this.collegeDomain
         },
         process.env.ACCESS_TOKEN_SECRET,
         {

@@ -66,6 +66,13 @@ const lostFoundSchema = new Schema(
         isResolved: {
             type: Boolean,
             default: false
+        },
+        collegeDomain: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+            index: true
         }
     },
     {

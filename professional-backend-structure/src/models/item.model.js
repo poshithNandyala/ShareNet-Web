@@ -83,6 +83,13 @@ const itemSchema = new Schema(
             type: String,
             enum: ['ANYTIME', 'WEEKDAYS', 'WEEKENDS', 'BY_APPOINTMENT'],
             default: 'ANYTIME'
+        },
+        collegeDomain: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+            index: true
         }
     },
     {

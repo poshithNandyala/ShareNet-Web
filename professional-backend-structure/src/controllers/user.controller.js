@@ -5,6 +5,9 @@ import { Transaction } from '../models/transaction.model.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResponse.js';
 import jwt from 'jsonwebtoken';
+import { getCollegeByEmail, isValidCollegeEmail } from '../utils/colleges.js';
+import { OTP } from '../models/otp.model.js';
+import { sendOTPEmail, generateOTP } from '../utils/email.js';
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -27,16 +30,6 @@ const generateAccessAndRefreshTokens = async (userId) => {
     }
 }
 
-const validateCampusEmail = (email) => {
-    const campusEmailPatterns = [
-        /\.edu$/i,
-        /\.edu\.[a-z]{2}$/i,
-        /\.ac\.[a-z]{2}$/i,
-        /\.edu\.[a-z]{2,3}$/i
-    ];
-    return campusEmailPatterns.some(pattern => pattern.test(email));
-}
-
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password, phone, campus, hostelBlock, roomNumber } = req.body
 
@@ -46,9 +39,21 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "ALL FIELDS ARE REQUIRED")
     }
 
-    if (!validateCampusEmail(email)) {
+    if (!isValidCollegeEmail(email)) {
         throw new ApiError(400, "PLEASE USE A VALID CAMPUS EMAIL (.edu, .ac.in, etc.)")
     }
+
+    const otpRecord = await OTP.findOne({
+        email: email.toLowerCase(),
+        verified: true,
+        expiresAt: { $gt: new Date() }
+    });
+
+    if (!otpRecord) {
+        throw new ApiError(400, "Email not verified. Please verify your email first.");
+    }
+
+    const collegeInfo = getCollegeByEmail(email);
 
     const existedUser = await User.findOne({
         $or: [{ username }, { email }]
@@ -75,6 +80,8 @@ const registerUser = asyncHandler(async (req, res) => {
         campus,
         hostelBlock,
         roomNumber,
+        college: collegeInfo.name,
+        collegeDomain: collegeInfo.domain,
         avatar: avatarUrl
     })
 
@@ -85,6 +92,8 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!createdUser) {
         throw new ApiError(500, "USER NOT CREATED")
     }
+
+    await OTP.deleteMany({ email: email.toLowerCase() });
 
     return res.status(201).json(
         new ApiResponse(201, createdUser, "USER CREATED SUCCESSFULLY")
@@ -354,6 +363,82 @@ const getTransactionHistory = asyncHandler(async (req, res) => {
     );
 });
 
+const getColleges = asyncHandler(async (req, res) => {
+    const { getAllColleges } = await import('../utils/colleges.js');
+    return res.status(200).json(
+        new ApiResponse(200, getAllColleges(), "COLLEGES FETCHED SUCCESSFULLY")
+    );
+});
+
+const sendOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    if (!isValidCollegeEmail(email)) {
+        throw new ApiError(400, "Please use a valid college/university email (.edu, .ac.in, etc.)");
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+        throw new ApiError(409, "An account with this email already exists");
+    }
+
+    await OTP.deleteMany({ email: email.toLowerCase() });
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await OTP.create({
+        email: email.toLowerCase(),
+        otp,
+        expiresAt
+    });
+
+    await sendOTPEmail(email, otp);
+
+    return res.status(200).json(
+        new ApiResponse(200, { email }, "OTP sent successfully. Check your email.")
+    );
+});
+
+const verifyOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+        throw new ApiError(400, "Email and OTP are required");
+    }
+
+    const otpRecord = await OTP.findOne({
+        email: email.toLowerCase(),
+        expiresAt: { $gt: new Date() }
+    }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+        throw new ApiError(400, "OTP expired or not found. Please request a new one.");
+    }
+
+    if (otpRecord.attempts >= 5) {
+        await OTP.deleteMany({ email: email.toLowerCase() });
+        throw new ApiError(429, "Too many failed attempts. Please request a new OTP.");
+    }
+
+    if (otpRecord.otp !== otp) {
+        otpRecord.attempts += 1;
+        await otpRecord.save();
+        throw new ApiError(400, `Incorrect OTP. ${5 - otpRecord.attempts} attempts remaining.`);
+    }
+
+    otpRecord.verified = true;
+    await otpRecord.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, { email, verified: true }, "Email verified successfully")
+    );
+});
+
 export {
     registerUser,
     loginUser,
@@ -364,5 +449,8 @@ export {
     UpdateAccountDetails,
     updateUserAvatar,
     getUserProfile,
-    getTransactionHistory
+    getTransactionHistory,
+    getColleges,
+    sendOTP,
+    verifyOTP
 }

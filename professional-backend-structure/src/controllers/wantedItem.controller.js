@@ -22,6 +22,7 @@ const createWantedItem = asyncHandler(async (req, res) => {
 
     const wantedItem = await WantedItem.create({
         user: req.user._id,
+        collegeDomain: req.user.collegeDomain,
         title,
         description,
         category,
@@ -42,7 +43,7 @@ const getWantedItems = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, category, urgency, budgetType, search } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { status: 'OPEN' };
+    const filter = { status: 'OPEN', collegeDomain: req.user.collegeDomain };
 
     if (category) {
         filter.category = category;

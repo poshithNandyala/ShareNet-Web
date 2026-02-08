@@ -67,6 +67,7 @@ const createPost = asyncHandler(async (req, res) => {
         category,
         photo,
         user: req.user._id,
+        collegeDomain: req.user.collegeDomain,
         verificationQuestions: parsedVerificationQuestions,
         reward: parsedReward,
         lastSeenDate: lastSeenDate || new Date(),
@@ -86,7 +87,7 @@ const getPosts = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, type, status, category, urgency } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = {};
+    const filter = { collegeDomain: req.user.collegeDomain };
 
     if (type && ['LOST', 'FOUND'].includes(type)) {
         filter.type = type;
