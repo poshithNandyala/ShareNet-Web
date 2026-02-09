@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { Item } from '../models/item.model.js';
+import { Request } from '../models/request.model.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 const createItem = asyncHandler(async (req, res) => {
@@ -230,6 +231,69 @@ const getItemById = asyncHandler(async (req, res) => {
     );
 });
 
+const getRecommendations = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const collegeDomain = req.user.collegeDomain;
+
+    const [userRequests, userItems] = await Promise.all([
+        Request.find({ requester: userId }).populate('item', 'category'),
+        Item.find({ owner: userId }).select('category')
+    ]);
+
+    const categoryFrequency = {};
+    userRequests.forEach(r => {
+        if (r.item?.category) {
+            categoryFrequency[r.item.category] = (categoryFrequency[r.item.category] || 0) + 1;
+        }
+    });
+    userItems.forEach(i => {
+        if (i.category) {
+            categoryFrequency[i.category] = (categoryFrequency[i.category] || 0) + 1;
+        }
+    });
+
+    const preferredCategories = Object.keys(categoryFrequency);
+
+    const candidateItems = await Item.find({
+        collegeDomain,
+        owner: { $ne: userId },
+        isAvailable: true
+    }).populate('owner', 'fullName username avatar trustScore');
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const scoredItems = candidateItems.map(item => {
+        let score = 0;
+
+        if (preferredCategories.includes(item.category)) {
+            score += 3;
+        }
+
+        if (item.owner?.trustScore > 70) {
+            score += 1;
+        }
+
+        if (item.mode === 'RENT' || item.mode === 'SELL') {
+            score += 1;
+        }
+
+        if (item.createdAt >= sevenDaysAgo) {
+            score += 2;
+        }
+
+        return { item, score };
+    });
+
+    scoredItems.sort((a, b) => b.score - a.score);
+
+    const recommendations = scoredItems.slice(0, 6).map(s => s.item);
+
+    return res.status(200).json(
+        new ApiResponse(200, recommendations, "RECOMMENDATIONS FETCHED SUCCESSFULLY")
+    );
+});
+
 export {
     createItem,
     updateItem,
@@ -237,5 +301,6 @@ export {
     markUnavailable,
     getMyItems,
     getAllItems,
-    getItemById
+    getItemById,
+    getRecommendations
 };

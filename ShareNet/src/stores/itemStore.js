@@ -4,6 +4,7 @@ import api from '../lib/axios';
 const useItemStore = create((set, get) => ({
     items: [],
     myItems: [],
+    recommendations: [],
     currentItem: null,
     isLoading: false,
     filters: {
@@ -79,6 +80,15 @@ const useItemStore = create((set, get) => ({
     deleteItem: async (id) => {
         await api.delete(`/items/${id}`);
         set({ myItems: get().myItems.filter(item => item._id !== id) });
+    },
+
+    fetchRecommendations: async () => {
+        try {
+            const response = await api.get('/items/recommendations');
+            set({ recommendations: response.data.data || [] });
+        } catch (error) {
+            set({ recommendations: [] });
+        }
     },
 
     toggleAvailability: async (id) => {
