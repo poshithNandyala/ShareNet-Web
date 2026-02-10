@@ -64,8 +64,9 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     let avatarUrl = undefined;
-    if (req.files?.avatar?.[0]?.path) {
-        const avatar = await uploadOnCloudinary(req.files.avatar[0].path);
+    const avatarFile = req.file || req.files?.avatar?.[0];
+    if (avatarFile?.path) {
+        const avatar = await uploadOnCloudinary(avatarFile.path);
         if (avatar) {
             avatarUrl = avatar.url;
         }
