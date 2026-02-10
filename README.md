@@ -52,6 +52,44 @@ Unlike generic platforms, ShareNet enforces trust at the **infrastructure level*
 
 ---
 
+## One Platform, Every Campus — Fully Isolated
+
+ShareNet is not a single shared marketplace. It is a **multi-tenant platform where every college operates as an independent, isolated ecosystem** — all from a single deployment.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ShareNet (Single Deployment)                │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │  IIIT       │  │  IIT        │  │  NIT        │   ...100+   │
+│  │  Lucknow    │  │  Bombay     │  │  Trichy     │   colleges  │
+│  │             │  │             │  │             │             │
+│  │ Items       │  │ Items       │  │ Items       │             │
+│  │ Users       │  │ Users       │  │ Users       │             │
+│  │ Lost&Found  │  │ Lost&Found  │  │ Lost&Found  │             │
+│  │ Wanted      │  │ Wanted      │  │ Wanted      │             │
+│  │ Trust Scores│  │ Trust Scores│  │ Trust Scores│             │
+│  └─────────────┘  └─────────────┘  └─────────────┘             │
+│       ↕ Zero data leakage between campuses ↕                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**How it works:**
+
+| Aspect | Implementation |
+|--------|---------------|
+| **Identity Scoping** | User's `collegeDomain` is extracted from their verified email at registration (e.g., `iiitl.ac.in`, `iitb.ac.in`) |
+| **Data Isolation** | All item queries, recommendations, and feeds are filtered by `collegeDomain` — a student at IIIT Lucknow never sees items listed at IIT Bombay |
+| **Automatic Onboarding** | New colleges are onboarded the moment a student signs up with a valid `.edu` / `.ac.in` / `.edu.in` domain — no manual setup required |
+| **Independent Ecosystems** | Each campus has its own marketplace, lost & found board, wanted board, trust scores, and transaction history |
+| **Scalability** | Adding a new campus costs zero infrastructure — the platform scales horizontally by college domain without any code or configuration changes |
+
+**Why this matters:** A student at IIIT Lucknow sees only items, lost posts, and wanted requests from IIIT Lucknow. This keeps the experience hyperlocal, relevant, and trustworthy — exactly how a campus community should work. And yet, the entire system runs on a single deployment, making it operationally simple and cost-effective to scale to hundreds of colleges.
+
+> **100+ Indian college domains supported out of the box** — IIITs, IITs, NITs, and more. New domains are auto-detected or can be added via [GitHub Issues](https://github.com/Pranilash/ShareNet-Web/issues).
+
+---
+
 ## Platform Highlights at a Glance
 
 | Capability | What It Does | Why It Matters |
